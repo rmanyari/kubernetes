@@ -3933,6 +3933,23 @@ const (
 	ServiceTypeExternalName ServiceType = "ExternalName"
 )
 
+// Service Internal Traffic Policy string describes the valid internal traffic policies for a service
+type ServiceInternalTrafficPolicy string
+
+const (
+	// InternalTrafficPolicyCluster means traffic will get routed to all
+	// endpoints in the cluster.
+	ServiceInternalTrafficPolicyCluster ServiceInternalTrafficPolicy = "Cluster"
+
+	// InternalTrafficPolicyPreferLocal means traffic will get routed to
+	// node-local endpoints if available, and fallback to Cluster as needed.
+	ServiceInternalTrafficPolicyPreferLocal ServiceInternalTrafficPolicy = "PreferLocal"
+
+	// InternalTrafficPolicyLocal means traffic will be get routed to
+	// node-local endpoints only, drop otherwise.
+	ServiceInternalTrafficPolicyLocal ServiceInternalTrafficPolicy = "Local"
+)
+
 // Service External Traffic Policy Type string
 type ServiceExternalTrafficPolicyType string
 
@@ -4119,6 +4136,16 @@ type ServiceSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
 	// +optional
 	Type ServiceType `json:"type,omitempty" protobuf:"bytes,4,opt,name=type,casttype=ServiceType"`
+
+	// internalTrafficPolicy determines how internal traffic to a service is routed. Valid
+	// options are Cluster, PreferLocal, Local. The default is "Cluster" which routes to all
+	// cluster-wide endpoints (or use topology aware subsetting if enabled). "PreferLocal" will
+	// route to node-local endpoints if it exists, otherwise fallback to behavior from Cluster.
+	// "Local" routes to node-local endpoints, drop otherwise.
+	// This field does not apply for headless Services or Services of type ExternalName
+	// More info: https://github.com/kubernetes/enhancements/tree/master/keps/sig-network/2086-service-internal-traffic-policy
+	// +optional
+	InternalTrafficPolicy ServiceInternalTrafficPolicy `json:"internalTrafficPolicy,omitempty" protobuf:"bytes,20,opt,name=internalTrafficPolicy,casttype=ServiceInternalTrafficPolicy"`
 
 	// externalIPs is a list of IP addresses for which nodes in the cluster
 	// will also accept traffic for this service.  These IPs are not managed by

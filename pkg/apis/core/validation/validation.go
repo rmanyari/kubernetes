@@ -4149,11 +4149,16 @@ var supportedSessionAffinityType = sets.NewString(string(core.ServiceAffinityCli
 var supportedServiceType = sets.NewString(string(core.ServiceTypeClusterIP), string(core.ServiceTypeNodePort),
 	string(core.ServiceTypeLoadBalancer), string(core.ServiceTypeExternalName))
 
+var supportedServiceInternalTrafficPolicy = sets.NewString(
+	string(core.ServiceInternalTrafficPolicyCluster),
+	string(core.ServiceInternalTrafficPolicyPreferLocal),
+	string(core.ServiceInternalTrafficPolicyLocal))
+
 var supportedServiceIPFamily = sets.NewString(string(core.IPv4Protocol), string(core.IPv6Protocol))
 var supportedServiceIPFamilyPolicy = sets.NewString(string(core.IPFamilyPolicySingleStack), string(core.IPFamilyPolicyPreferDualStack), string(core.IPFamilyPolicyRequireDualStack))
 
 // ValidateService tests if required fields/annotations of a Service are valid.
-func ValidateService(service *core.Service, allowAppProtocol bool) field.ErrorList {
+func ValidateService(service *core.Service, allowAppProtocol, allowInternalTrafficPolicy bool) field.ErrorList {
 	allErrs := ValidateObjectMeta(&service.ObjectMeta, true, ValidateServiceName, field.NewPath("metadata"))
 
 	specPath := field.NewPath("spec")
@@ -4200,6 +4205,23 @@ func ValidateService(service *core.Service, allowAppProtocol bool) field.ErrorLi
 			allErrs = append(allErrs, ValidateDNS1123Subdomain(cname, specPath.Child("externalName"))...)
 		} else {
 			allErrs = append(allErrs, field.Required(specPath.Child("externalName"), ""))
+		}
+		// Per keps/sig-network/2086 internalTrafficPolicy is not allowed on services of type externalName.
+		if service.Spec.InternalTrafficPolicy != "" {
+			allErrs = append(allErrs, field.Forbidden(specPath.Child("internalTrafficPolicy"), "may not be set for ExternalName services"))
+		}
+	}
+
+	if service.Spec.InternalTrafficPolicy != "" {
+		if !allowInternalTrafficPolicy {
+			allErrs = append(allErrs, field.Forbidden(specPath.Child("internalTrafficPolicy"), "This field can be enabled with the ServiceInternalTrafficPolicy feature gate"))
+		}
+		// Per keps/sig-network/2086 internalTrafficPolicy is not allowed on headless services.
+		if isHeadlessService(service) {
+			allErrs = append(allErrs, field.Forbidden(specPath.Child("internalTrafficPolicy"), "may not be set on headless services"))
+		}
+		if !supportedServiceInternalTrafficPolicy.Has(string(service.Spec.InternalTrafficPolicy)) {
+			allErrs = append(allErrs, field.NotSupported(specPath.Child("internalTrafficPolicy"), service.Spec.InternalTrafficPolicy, supportedServiceInternalTrafficPolicy.List()))
 		}
 	}
 
@@ -4459,7 +4481,10 @@ func ValidateServiceCreate(service *core.Service) field.ErrorList {
 	// allow AppProtocol value if the feature gate is set.
 	allowAppProtocol := utilfeature.DefaultFeatureGate.Enabled(features.ServiceAppProtocol)
 
-	return ValidateService(service, allowAppProtocol)
+	// allow InternalTrafficPolicy value if the feature fate is set.
+	allowInternalTrafficPolicy := utilfeature.DefaultFeatureGate.Enabled(features.ServiceInternalTrafficPolicy)
+
+	return ValidateService(service, allowAppProtocol, allowInternalTrafficPolicy)
 }
 
 // ValidateServiceUpdate tests if required fields in the service are set during an update
@@ -4489,7 +4514,16 @@ func ValidateServiceUpdate(service, oldService *core.Service) field.ErrorList {
 		}
 	}
 
-	return append(allErrs, ValidateService(service, allowAppProtocol)...)
+	// allow InternalTrafficPolicy value if the feature fate is set or the
+	// field is already set on the resource.
+	allowInternalTrafficPolicy := utilfeature.DefaultFeatureGate.Enabled(features.ServiceInternalTrafficPolicy)
+	if !allowInternalTrafficPolicy {
+		if oldService.Spec.InternalTrafficPolicy != "" {
+			allowInternalTrafficPolicy = true
+		}
+	}
+
+	return append(allErrs, ValidateService(service, allowAppProtocol, allowInternalTrafficPolicy)...)
 }
 
 // ValidateServiceStatusUpdate tests if required fields in the Service are set when updating status.

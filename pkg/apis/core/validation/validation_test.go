@@ -10456,6 +10456,53 @@ func TestValidateServiceCreate(t *testing.T) {
 			numErrs: 0,
 		},
 		{
+			name: "valid internalTrafficPolicy=Cluster",
+			tweakSvc: func(s *core.Service) {
+				s.Spec.InternalTrafficPolicy = core.ServiceInternalTrafficPolicyCluster
+			},
+			numErrs: 0,
+		},
+		{
+			name: "valid internalTrafficPolicy=PreferLocal",
+			tweakSvc: func(s *core.Service) {
+				s.Spec.InternalTrafficPolicy = core.ServiceInternalTrafficPolicyPreferLocal
+			},
+			numErrs: 0,
+		},
+		{
+			name: "valid internalTrafficPolicy=Local",
+			tweakSvc: func(s *core.Service) {
+				s.Spec.InternalTrafficPolicy = core.ServiceInternalTrafficPolicyLocal
+			},
+			numErrs: 0,
+		},
+		{
+			name: "invalid internalTrafficPolicy=Remote",
+			tweakSvc: func(s *core.Service) {
+				s.Spec.InternalTrafficPolicy = "Remote"
+			},
+			numErrs: 1,
+		},
+		{
+			name: "invalid internalTrafficPolicy=PreferLocal with ExternalName service",
+			tweakSvc: func(s *core.Service) {
+				s.Spec.InternalTrafficPolicy = core.ServiceInternalTrafficPolicyPreferLocal
+				s.Spec.Type = core.ServiceTypeExternalName
+				s.Spec.ExternalName = "test.com"
+			},
+			numErrs: 1,
+		},
+		{
+			name: "invalid internalTrafficPolicy=PreferLocal with headless service",
+			tweakSvc: func(s *core.Service) {
+				s.Spec.InternalTrafficPolicy = core.ServiceInternalTrafficPolicyPreferLocal
+				s.Spec.Type = core.ServiceTypeClusterIP
+				s.Spec.ClusterIPs = []string{core.ClusterIPNone}
+				s.Spec.ClusterIP = core.ClusterIPNone
+			},
+			numErrs: 1,
+		},
+		{
 			name: "valid cluster service without NodePort",
 			tweakSvc: func(s *core.Service) {
 				s.Spec.Type = core.ServiceTypeClusterIP
@@ -11178,6 +11225,7 @@ func TestValidateServiceCreate(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer featuregatetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.ServiceAppProtocol, true)()
+			defer featuregatetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.ServiceInternalTrafficPolicy, true)()
 
 			svc := makeValidService()
 			tc.tweakSvc(&svc)

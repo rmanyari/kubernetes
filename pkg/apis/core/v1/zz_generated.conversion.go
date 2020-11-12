@@ -7586,6 +7586,7 @@ func autoConvert_v1_ServiceSpec_To_core_ServiceSpec(in *v1.ServiceSpec, out *cor
 	out.ClusterIP = in.ClusterIP
 	out.ClusterIPs = *(*[]string)(unsafe.Pointer(&in.ClusterIPs))
 	out.Type = core.ServiceType(in.Type)
+	out.InternalTrafficPolicy = core.ServiceInternalTrafficPolicy(in.InternalTrafficPolicy)
 	out.ExternalIPs = *(*[]string)(unsafe.Pointer(&in.ExternalIPs))
 	out.SessionAffinity = core.ServiceAffinity(in.SessionAffinity)
 	out.LoadBalancerIP = in.LoadBalancerIP
@@ -7608,6 +7609,7 @@ func Convert_v1_ServiceSpec_To_core_ServiceSpec(in *v1.ServiceSpec, out *core.Se
 
 func autoConvert_core_ServiceSpec_To_v1_ServiceSpec(in *core.ServiceSpec, out *v1.ServiceSpec, s conversion.Scope) error {
 	out.Type = v1.ServiceType(in.Type)
+	out.InternalTrafficPolicy = v1.ServiceInternalTrafficPolicy(in.InternalTrafficPolicy)
 	out.Ports = *(*[]v1.ServicePort)(unsafe.Pointer(&in.Ports))
 	out.Selector = *(*map[string]string)(unsafe.Pointer(&in.Selector))
 	out.ClusterIP = in.ClusterIP

@@ -573,6 +573,12 @@ const (
 	// Enables AppProtocol field for Services and Endpoints.
 	ServiceAppProtocol featuregate.Feature = "ServiceAppProtocol"
 
+	// owner: @andrewsykim
+	// alpha: v1.21
+	//
+	// Enables internal service traffic policy.
+	ServiceInternalTrafficPolicy = "ServiceInternalTrafficPolicy"
+
 	// owner: @wojtek-t
 	// alpha: v1.18
 	// beta: v1.19
@@ -762,6 +768,7 @@ var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureS
 	PodDisruptionBudget:                            {Default: true, PreRelease: featuregate.Beta},
 	ServiceTopology:                                {Default: false, PreRelease: featuregate.Alpha},
 	ServiceAppProtocol:                             {Default: true, PreRelease: featuregate.Beta},
+	ServiceInternalTrafficPolicy:                   {Default: false, PreRelease: featuregate.Alpha},
 	ImmutableEphemeralVolumes:                      {Default: true, PreRelease: featuregate.Beta},
 	HugePageStorageMediumSize:                      {Default: true, PreRelease: featuregate.Beta},
 	DownwardAPIHugePages:                           {Default: false, PreRelease: featuregate.Alpha},
